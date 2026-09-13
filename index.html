@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spielplan · Bundesliga & 2. Bundesliga</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Default (1. Bundesliga / FC Bayern) Theme */
+    --accent: #dc052d;
+    --accent-dim: #7a2634;
+    --accent-soft: rgba(220,5,45,0.09);
+    --trim: #0d2240;
+    --bg-a: #24080d;
+    --bg-b: #150a10;
+    --bg: #0f0708;
+    --bg-raise: #1c0f12;
+    --line: #3a1e22;
+    --text: #f2ede6;
+    --text-dim: #a1897f;
+    --live: #ff8a3d;
+  }
+  body.theme-bl2{
+    /* 2. Bundesliga / SV Darmstadt 98 Theme */
+    --accent: #0057a8;
+    --accent-dim: #1f3c63;
+    --accent-soft: rgba(0,87,168,0.10);
+    --trim: #ffffff;
+    --bg-a: #0c1c33;
+    --bg-b: #081221;
+    --bg: #060d18;
+    --bg-raise: #101f34;
+    --line: #1c3252;
+    --text: #eef2f8;
+    --text-dim: #8199bd;
+    --live: #ff8a3d;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(ellipse at 15% -10%, var(--bg-a) 0%, transparent 55%),
+      radial-gradient(ellipse at 100% 0%, var(--bg-b) 0%, transparent 45%),
+      var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 0 0 60px 0;
+    transition: background .3s ease;
+  }
+
+  .kit-stripe{
+    height: 6px;
+    width: 100%;
+  }
+  body:not(.theme-bl2) .kit-stripe{
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent) 82%, var(--trim) 82%, var(--trim) 100%);
+  }
+  body.theme-bl2 .kit-stripe{
+    background: linear-gradient(90deg, var(--accent) 50%, var(--trim) 50%);
+  }
+
+  .wrap{
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 26px 20px 0 20px;
+  }
+  header.top{
+    display:flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 18px;
+    gap: 12px;
+  }
+  header.top .heading{
+    display:flex;
+    align-items:center;
+    gap: 12px;
+  }
+  header.top .heading img{
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 4px rgba(0,0,0,.5));
+  }
+  header.top h1{
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 24px;
+    letter-spacing: 0.2px;
+    margin: 0;
+    color: var(--text);
+    line-height: 1.15;
+  }
+  header.top h1 .sub{
+    display:block;
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.3px;
+    margin-top: 2px;
+  }
+  header.top .meta{
+    font-size: 11.5px;
+    color: var(--text-dim);
+    text-align: right;
+    line-height: 1.5;
+    flex: none;
+  }
+  header.top .meta button{
+    background:none;
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    font-family:'Inter',sans-serif;
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    margin-top: 6px;
+    cursor: pointer;
+  }
+  header.top .meta button:hover{ color: var(--text); border-color: var(--accent-dim); }
+
+  .league-switch{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--line);
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 14px;
+  }
+  .league-switch button{
+    font-family:'Oswald', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    background: transparent;
+    color: var(--text-dim);
+    border: none;
+    border-radius: 8px;
+    padding: 11px 6px;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+  }
+  .league-switch button.active{
+    background: var(--bg-raise);
+    color: var(--accent);
+  }
+  .league-switch button:not(.active):hover{ color: var(--text); }
+
+  .weekend-switch{
+    display:flex;
+    gap: 22px;
+    margin-bottom: 26px;
+  }
+  .weekend-switch button{
+    background:none;
+    border:none;
+    font-family:'Inter',sans-serif;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-dim);
+    padding: 6px 0;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .weekend-switch button.active{
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+
+  .day-group{ margin-bottom: 30px; }
+  .day-heading{
+    display:flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .day-heading .name{
+    font-family:'Oswald', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .day-heading .date{
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .day-heading .rule{
+    flex:1;
+    height:1px;
+    background: var(--line);
+  }
+
+  .match{
+    display:grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 10px;
+    margin: 0 -10px;
+    border-bottom: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .match:last-child{ border-bottom: none; }
+  .match.featured{
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-dim);
+    border-bottom: 1px solid var(--accent-dim);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .match.featured .team{ font-weight: 600; }
+  .match.featured .kickoff:not(.final):not(.live){ color: var(--text); }
+
+  .team{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .team img{ width:18px; height:18px; object-fit:contain; flex:none; }
+  .team.away{ justify-content:flex-end; text-align: right; }
+  .team.away img{ order:2; }
+  .team .rank{
+    font-family: 'Inter', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-dim);
+    background: var(--bg-raise);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    flex: none;
+  }
+
+  .kickoff{
+    font-family:'Oswald', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--accent);
+    text-align:center;
+    min-width: 66px;
+    padding: 5px 8px;
+    border: 1px solid var(--accent-dim);
+    border-radius: 6px;
+    background: var(--accent-soft);
+  }
+  .kickoff.final{
+    color: var(--text);
+    border-color: var(--line);
+    background: var(--bg-raise);
+    font-size: 15.5px;
+  }
+  .kickoff.live{
+    color: var(--live);
+    border-color: var(--live);
+    background: rgba(255,138,61,0.10);
+  }
+  .kickoff .tag{
+    display:block;
+    font-family:'Inter',sans-serif;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.4px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .note, .status{
+    font-size: 12.5px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    line-height: 1.6;
+  }
+  .status.error{ color: #e2836a; }
+  .spinner{
+    display:inline-block;
+    width:14px; height:14px;
+    border: 2px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .retry{
+    margin-top: 10px;
+    background: var(--bg-raise);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family:'Inter',sans-serif;
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .retry:hover{ border-color: var(--accent-dim); }
+
+  @media (max-width: 420px){
+    .team{ font-size: 13.5px; }
+    header.top h1{ font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="kit-stripe"></div>
+<div class="wrap">
+
+  <header class="top">
+    <div class="heading">
+      <img id="club-logo" src="" alt="" style="display:none;">
+      <h1 id="page-title">Bundesliga·Spielplan<span class="sub" id="page-sub">1. Bundesliga · im Design des FC Bayern München</span></h1>
+    </div>
+    <div class="meta">
+      <div id="updated-at">wird geladen …</div>
+      <button id="refresh-btn">Jetzt aktualisieren</button>
+    </div>
+  </header>
+
+  <div class="league-switch">
+    <button id="btn-bl1" class="active">1. Bundesliga</button>
+    <button id="btn-bl2">2. Bundesliga</button>
+  </div>
+
+  <div class="weekend-switch">
+    <button id="btn-current" class="active">Aktuelles Wochenende</button>
+    <button id="btn-next">Kommendes Wochenende</button>
+  </div>
+
+  <div id="content"></div>
+
+</div>
+
+<script>
+const API = 'https://api.openligadb.de';
+const LEAGUE_NAMES = { bl1: '1. Bundesliga', bl2: '2. Bundesliga' };
+const THEME_CLUB = { bl1: 'FC Bayern München', bl2: 'SV Darmstadt 98' };
+const THEME_MATCH = { bl1: 'Bayern München', bl2: 'Darmstadt 98' };
+
+let league = 'bl1';
+let weekend = 'current';
+
+// cache[league] = { season, currentOrderId, groups: { [orderId]: {label, matches} }, table: { [teamId]: rank } }
+let cache = { bl1: null, bl2: null };
+
+function currentSeason(){
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1;
+  return (m >= 7) ? y : y - 1;
+}
+
+async function fetchJSON(url){
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+function dayName(date){ return date.toLocaleDateString('de-DE', { weekday: 'long', timeZone: 'Europe/Berlin' }); }
+function dayDate(date){ return date.toLocaleDateString('de-DE', { day: '2-digit', month: 'short', timeZone: 'Europe/Berlin' }); }
+function timeLabel(date){ return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' }); }
+function isSameBerlinDay(a, b){
+  const fmt = d => d.toLocaleDateString('en-CA', { timeZone: 'Europe/Berlin' });
+  return fmt(a) === fmt(b);
+}
+
+function groupMatchesByDay(matches){
+  const days = [];
+  matches.slice()
+    .sort((a, b) => new Date(a.matchDateTime) - new Date(b.matchDateTime))
+    .forEach(m => {
+      const dt = new Date(m.matchDateTime);
+      let group = days.find(d => isSameBerlinDay(d.refDate, dt));
+      if (!group) { group = { refDate: dt, name: dayName(dt), date: dayDate(dt), matches: [] }; days.push(group); }
+      group.matches.push(m);
+    });
+  return days;
+}
+
+function finalResult(match){
+  if (!match.matchIsFinished || !match.matchResults || !match.matchResults.length) return null;
+  const endergebnis = match.matchResults.find(r => r.resultTypeID === 2) || match.matchResults[match.matchResults.length - 1];
+  return endergebnis.pointsTeam1 + ':' + endergebnis.pointsTeam2;
+}
+
+function isLiveNow(match){
+  if (match.matchIsFinished) return false;
+  const start = new Date(match.matchDateTime).getTime();
+  const now = Date.now();
+  return now >= start && now <= start + 125 * 60 * 1000;
+}
+
+function crest(team){
+  return team.teamIconUrl ? `<img src="${team.teamIconUrl}" alt="" onerror="this.style.display='none'">` : '';
+}
+
+async function ensureLeagueData(lg){
+  if (cache[lg]) return cache[lg];
+  const season = currentSeason();
+  const currentGroup = await fetchJSON(`${API}/getcurrentgroup/${lg}`);
+  cache[lg] = { season, currentOrderId: currentGroup.groupOrderID, groups: {}, table: null };
+  return cache[lg];
+}
+
+async function ensureGroupMatches(lg, orderId){
+  const state = cache[lg];
+  if (state.groups[orderId]) return state.groups[orderId];
+  const matches = await fetchJSON(`${API}/getmatchdata/${lg}/${state.season}/${orderId}`);
+  const label = matches.length ? matches[0].group.groupName : ('Spieltag ' + orderId);
+  state.groups[orderId] = { label, matches };
+  return state.groups[orderId];
+}
+
+async function ensureTable(lg){
+  const state = cache[lg];
+  if (state.table) return state.table;
+  try {
+    const rows = await fetchJSON(`${API}/getbltable/${lg}/${state.season}`);
+    const table = {};
+    rows.forEach((row, idx) => {
+      const id = row.teamInfoId ?? row.teamId;
+      if (id != null) table[id] = idx + 1;
+    });
+    state.table = table;
+  } catch (e) {
+    state.table = {}; // Tabellenplatz ist ein Zusatz - wenn das scheitert, zeigen wir die Spiele trotzdem
+  }
+  return state.table;
+}
+
+function rankBadge(table, team){
+  const rank = table[team.teamId];
+  return rank ? `<span class="rank">${rank}.</span>` : '';
+}
+
+function setStatus(html, isError){
+  document.getElementById('content').innerHTML = `<div class="status${isError ? ' error' : ''}">${html}</div>`;
+}
+
+function applyTheme(){
+  document.body.classList.toggle('theme-bl2', league === 'bl2');
+  document.getElementById('page-sub').textContent = `${LEAGUE_NAMES[league]} · im Design ${league === 'bl1' ? 'des' : 'von'} ${THEME_CLUB[league]}`;
+}
+
+function updateClubLogo(matches){
+  const logo = document.getElementById('club-logo');
+  const needle = THEME_MATCH[league];
+  const flat = [];
+  matches.forEach(m => { flat.push(m.team1, m.team2); });
+  const club = flat.find(t => t.teamName && t.teamName.includes(needle));
+  if (club && club.teamIconUrl) {
+    logo.src = club.teamIconUrl;
+    logo.style.display = 'block';
+  } else {
+    logo.style.display = 'none';
+  }
+}
+
+async function loadAndRender(){
+  applyTheme();
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="status"><span class="spinner"></span>Lade aktuelle Ansetzungen …</div>`;
+
+  try {
+    const state = await ensureLeagueData(league);
+    const orderId = weekend === 'current' ? state.currentOrderId : state.currentOrderId + 1;
+    const [group, table] = await Promise.all([
+      ensureGroupMatches(league, orderId),
+      ensureTable(league)
+    ]);
+
+    if (!group.matches.length) {
+      setStatus(`Für ${weekend === 'current' ? 'das aktuelle' : 'das kommende'} Wochenende liegen für die ${LEAGUE_NAMES[league]} noch keine Ansetzungen vor.`);
+      return;
+    }
+
+    updateClubLogo(group.matches);
+
+    const days = groupMatchesByDay(group.matches);
+    content.innerHTML = '';
+
+    const intro = document.createElement('div');
+    intro.className = 'note';
+    intro.style.marginBottom = '18px';
+    intro.textContent = `${group.label} · ${LEAGUE_NAMES[league]}`;
+    content.appendChild(intro);
+
+    days.forEach(day => {
+      const dgroup = document.createElement('div');
+      dgroup.className = 'day-group';
+
+      const heading = document.createElement('div');
+      heading.className = 'day-heading';
+      heading.innerHTML = `<span class="name">${day.name}</span><span class="date">${day.date}</span><span class="rule"></span>`;
+      dgroup.appendChild(heading);
+
+      day.matches.forEach(m => {
+        const dt = new Date(m.matchDateTime);
+        const final = finalResult(m);
+        const live = isLiveNow(m);
+        const isFeatured = [m.team1, m.team2].some(t => t.teamName && t.teamName.includes(THEME_MATCH[league]));
+        const row = document.createElement('div');
+        row.className = 'match' + (isFeatured ? ' featured' : '');
+
+        let kickoffClass = 'kickoff';
+        let main = timeLabel(dt);
+        let tag = 'Uhr';
+        if (final) { kickoffClass += ' final'; main = final; tag = 'Endstand'; }
+        else if (live) { kickoffClass += ' live'; tag = 'live'; }
+
+        row.innerHTML = `
+          <div class="team home">${rankBadge(table, m.team1)}${crest(m.team1)}<span>${m.team1.teamName}</span></div>
+          <div class="${kickoffClass}">${main}<span class="tag">${tag}</span></div>
+          <div class="team away"><span>${m.team2.teamName}</span>${crest(m.team2)}${rankBadge(table, m.team2)}</div>
+        `;
+        dgroup.appendChild(row);
+      });
+
+      content.appendChild(dgroup);
+    });
+
+    document.getElementById('updated-at').textContent =
+      'Zuletzt aktualisiert: ' + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' }) + ' Uhr';
+
+  } catch (err) {
+    console.error(err);
+    setStatus(
+      `Die Daten von OpenLigaDB (api.openligadb.de) konnten gerade nicht geladen werden. ` +
+      `Das kann an einer Netzwerksperre oder einer kurzzeitigen Störung der Quelle liegen.` +
+      `<br><button class="retry" onclick="loadAndRender()">Erneut versuchen</button>`,
+      true
+    );
+    document.getElementById('updated-at').textContent = 'Aktualisierung fehlgeschlagen';
+  }
+}
+
+function wireControls(){
+  document.getElementById('btn-bl1').addEventListener('click', () => {
+    league = 'bl1';
+    document.getElementById('btn-bl1').classList.add('active');
+    document.getElementById('btn-bl2').classList.remove('active');
+    loadAndRender();
+  });
+  document.getElementById('btn-bl2').addEventListener('click', () => {
+    league = 'bl2';
+    document.getElementById('btn-bl2').classList.add('active');
+    document.getElementById('btn-bl1').classList.remove('active');
+    loadAndRender();
+  });
+  document.getElementById('btn-current').addEventListener('click', () => {
+    weekend = 'current';
+    document.getElementById('btn-current').classList.add('active');
+    document.getElementById('btn-next').classList.remove('active');
+    loadAndRender();
+  });
+  document.getElementById('btn-next').addEventListener('click', () => {
+    weekend = 'next';
+    document.getElementById('btn-next').classList.add('active');
+    document.getElementById('btn-current').classList.remove('active');
+    loadAndRender();
+  });
+  document.getElementById('refresh-btn').addEventListener('click', () => {
+    cache = { bl1: null, bl2: null };
+    loadAndRender();
+  });
+}
+
+wireControls();
+loadAndRender();
+
+setInterval(() => {
+  cache = { bl1: null, bl2: null };
+  loadAndRender();
+}, 3 * 60 * 1000);
+</script>
+</body>
+</html>
