@@ -608,8 +608,8 @@ async function loadCupAndRender(){
 
   const now = new Date();
   const startOfToday = new Date(now); startOfToday.setHours(0,0,0,0);
-  const horizon = new Date(now.getTime() + 14 * 24 * 3600 * 1000);
   const season = currentSeason();
+  const MIN_MATCHES_PER_CLUB = 2;
   const needles = [
     { needle: 'Bayern München', club: 'bayern' },
     { needle: 'Darmstadt 98', club: 'darmstadt' }
@@ -623,7 +623,7 @@ async function loadCupAndRender(){
       const matches = await fetchJSON(`${API}/getmatchdata/${shortcut}/${season}`);
       matches.forEach(m => {
         const dt = new Date(m.matchDateTime);
-        if (dt < startOfToday || dt > horizon) return;
+        if (dt < startOfToday) return;
         const hit = needles.find(n =>
           (m.team1.teamName && m.team1.teamName.includes(n.needle)) ||
           (m.team2.teamName && m.team2.teamName.includes(n.needle))
@@ -647,10 +647,18 @@ async function loadCupAndRender(){
     if (await pull(shortcut, 'UEFA Champions League')) { clOk = true; break; }
   }
 
+  // Statt eines starren Zeitfensters: je Verein die nächsten anstehenden Spiele nehmen,
+  // damit auch bei größeren Pausen zwischen den Runden mindestens zwei Termine sichtbar bleiben.
   collected.sort((a, b) => new Date(a.match.matchDateTime) - new Date(b.match.matchDateTime));
+  const perClub = { bayern: [], darmstadt: [] };
+  collected.forEach(item => {
+    if (perClub[item.club].length < MIN_MATCHES_PER_CLUB) perClub[item.club].push(item);
+  });
+  collected = [...perClub.bayern, ...perClub.darmstadt]
+    .sort((a, b) => new Date(a.match.matchDateTime) - new Date(b.match.matchDateTime));
 
   if (!collected.length) {
-    content.innerHTML = `<div class="status">In den nächsten 14 Tagen sind für FC Bayern München und SV Darmstadt 98 keine DFB-Pokal- oder Champions-League-Spiele angesetzt` +
+    content.innerHTML = `<div class="status">Für FC Bayern München und SV Darmstadt 98 sind aktuell keine DFB-Pokal- oder Champions-League-Spiele bekannt` +
       `${anySourceFailed || !clOk ? ' (ein Teil der Quellen war gerade nicht abrufbar oder deckt die aktuelle Saison nicht ab)' : ''}.</div>`;
     document.getElementById('updated-at').textContent = 'Zuletzt aktualisiert: ' + timeLabel(new Date()) + ' Uhr';
     return;
@@ -660,7 +668,7 @@ async function loadCupAndRender(){
   const intro = document.createElement('div');
   intro.className = 'note';
   intro.style.marginBottom = '18px';
-  intro.textContent = 'Pokal- & Europapokalspiele der nächsten 14 Tage';
+  intro.textContent = 'Nächste Pokal- & Europapokalspiele je Verein';
   content.appendChild(intro);
 
   const days = [];
