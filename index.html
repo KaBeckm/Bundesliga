@@ -37,6 +37,21 @@
     --text-dim: #8199bd;
     --live: #ff8a3d;
   }
+  body.theme-cup{
+    /* Neutrale Ansicht für Pokal-/Europapokalspiele beider Vereine */
+    --accent: #d9b34c;
+    --accent-dim: #6b5a2a;
+    --accent-soft: rgba(217,179,76,0.08);
+    --trim: #ffffff;
+    --bg-a: #14140f;
+    --bg-b: #0d0d0a;
+    --bg: #0a0a08;
+    --bg-raise: #17160f;
+    --line: #2c2a1e;
+    --text: #f1efe6;
+    --text-dim: #9a9382;
+    --live: #ff8a3d;
+  }
 
   *{ box-sizing: border-box; }
   html,body{ margin:0; padding:0; }
@@ -61,6 +76,9 @@
   }
   body.theme-bl2 .kit-stripe{
     background: linear-gradient(90deg, var(--accent) 50%, var(--trim) 50%);
+  }
+  body.theme-cup .kit-stripe{
+    background: linear-gradient(90deg, #dc052d 50%, #0057a8 50%);
   }
 
   .wrap{
@@ -156,8 +174,9 @@
 
   .weekend-switch{
     display:flex;
-    gap: 22px;
+    gap: 18px;
     margin-bottom: 14px;
+    flex-wrap: wrap;
   }
   .weekend-switch button{
     background:none;
@@ -273,6 +292,24 @@
     border-color: var(--live);
     background: rgba(255,138,61,0.10);
   }
+  .kickoff.club-bayern{
+    color: #ff7a7a;
+    border-color: #7a2634;
+    background: rgba(220,5,45,0.10);
+  }
+  .kickoff.club-darmstadt{
+    color: #6badf2;
+    border-color: #1f3c63;
+    background: rgba(0,87,168,0.12);
+  }
+  .comp-label{
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    margin: 4px 0 2px 2px;
+  }
+  .comp-label.club-bayern{ color: #ff7a7a; }
+  .comp-label.club-darmstadt{ color: #6badf2; }
   .kickoff .tag{
     display:block;
     font-family:'Inter',sans-serif;
@@ -347,8 +384,9 @@
   </div>
 
   <div class="weekend-switch">
-    <button id="btn-current" class="active">Aktuelles Wochenende</button>
-    <button id="btn-next">Kommendes Wochenende</button>
+    <button id="btn-current" class="active">Aktueller Spieltag</button>
+    <button id="btn-next">Nächster Spieltag</button>
+    <button id="btn-cup">Pokalspiele</button>
   </div>
 
   <div id="content"></div>
@@ -462,6 +500,7 @@ function setStatus(html, isError){
 }
 
 function applyTheme(){
+  document.body.classList.remove('theme-cup');
   document.body.classList.toggle('theme-bl2', league === 'bl2');
   document.getElementById('page-sub').textContent = `${LEAGUE_NAMES[league]} · im Design ${league === 'bl1' ? 'des' : 'von'} ${THEME_CLUB[league]}`;
 }
@@ -494,7 +533,7 @@ async function loadAndRender(){
     ]);
 
     if (!group.matches.length) {
-      setStatus(`Für ${weekend === 'current' ? 'das aktuelle' : 'das kommende'} Wochenende liegen für die ${LEAGUE_NAMES[league]} noch keine Ansetzungen vor.`);
+      setStatus(`Für ${weekend === 'current' ? 'den aktuellen' : 'den nächsten'} Spieltag liegen für die ${LEAGUE_NAMES[league]} noch keine Ansetzungen vor.`);
       return;
     }
 
@@ -558,6 +597,131 @@ async function loadAndRender(){
   }
 }
 
+async function loadCupAndRender(){
+  document.body.classList.remove('theme-bl2');
+  document.body.classList.add('theme-cup');
+  document.getElementById('club-logo').style.display = 'none';
+  document.getElementById('page-sub').textContent = 'DFB-Pokal & Champions League · FC Bayern München und SV Darmstadt 98';
+
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="status"><span class="spinner"></span>Suche Pokal- und Europapokalspiele …</div>`;
+
+  const now = new Date();
+  const startOfToday = new Date(now); startOfToday.setHours(0,0,0,0);
+  const horizon = new Date(now.getTime() + 14 * 24 * 3600 * 1000);
+  const season = currentSeason();
+  const needles = [
+    { needle: 'Bayern München', club: 'bayern' },
+    { needle: 'Darmstadt 98', club: 'darmstadt' }
+  ];
+
+  let collected = [];
+  let anySourceFailed = false;
+
+  async function pull(shortcut, label){
+    try {
+      const matches = await fetchJSON(`${API}/getmatchdata/${shortcut}/${season}`);
+      matches.forEach(m => {
+        const dt = new Date(m.matchDateTime);
+        if (dt < startOfToday || dt > horizon) return;
+        const hit = needles.find(n =>
+          (m.team1.teamName && m.team1.teamName.includes(n.needle)) ||
+          (m.team2.teamName && m.team2.teamName.includes(n.needle))
+        );
+        if (!hit) return;
+        collected.push({ match: m, club: hit.club, competition: label });
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  if (!(await pull('dfb', 'DFB-Pokal'))) anySourceFailed = true;
+
+  // Der Champions-League-Shortcut bei OpenLigaDB ist saisonabhängig und nicht einheitlich benannt -
+  // beide gängigen Schreibweisen werden versucht, stillschweigend übersprungen, falls keine passt.
+  const clCandidates = [`ucl${season}`, `ucl${String(season).slice(-2)}`];
+  let clOk = false;
+  for (const shortcut of clCandidates) {
+    if (await pull(shortcut, 'UEFA Champions League')) { clOk = true; break; }
+  }
+
+  collected.sort((a, b) => new Date(a.match.matchDateTime) - new Date(b.match.matchDateTime));
+
+  if (!collected.length) {
+    content.innerHTML = `<div class="status">In den nächsten 14 Tagen sind für FC Bayern München und SV Darmstadt 98 keine DFB-Pokal- oder Champions-League-Spiele angesetzt` +
+      `${anySourceFailed || !clOk ? ' (ein Teil der Quellen war gerade nicht abrufbar oder deckt die aktuelle Saison nicht ab)' : ''}.</div>`;
+    document.getElementById('updated-at').textContent = 'Zuletzt aktualisiert: ' + timeLabel(new Date()) + ' Uhr';
+    return;
+  }
+
+  content.innerHTML = '';
+  const intro = document.createElement('div');
+  intro.className = 'note';
+  intro.style.marginBottom = '18px';
+  intro.textContent = 'Pokal- & Europapokalspiele der nächsten 14 Tage';
+  content.appendChild(intro);
+
+  const days = [];
+  collected.forEach(item => {
+    const dt = new Date(item.match.matchDateTime);
+    let g = days.find(d => isSameBerlinDay(d.refDate, dt));
+    if (!g) { g = { refDate: dt, name: dayName(dt), date: dayDate(dt), items: [] }; days.push(g); }
+    g.items.push(item);
+  });
+
+  days.forEach(day => {
+    const dgroup = document.createElement('div');
+    dgroup.className = 'day-group';
+    const heading = document.createElement('div');
+    heading.className = 'day-heading';
+    heading.innerHTML = `<span class="name">${day.name}</span><span class="date">${day.date}</span><span class="rule"></span>`;
+    dgroup.appendChild(heading);
+
+    day.items.forEach(item => {
+      const m = item.match;
+      const dt = new Date(m.matchDateTime);
+      const final = finalResult(m);
+      const live = isLiveNow(m);
+      const clubClass = item.club === 'bayern' ? 'club-bayern' : 'club-darmstadt';
+
+      let kickoffClass = 'kickoff ' + clubClass;
+      let main = timeLabel(dt);
+      let tag = 'Uhr';
+      if (final) { kickoffClass = 'kickoff final'; main = final; tag = 'Endstand'; }
+      else if (live) { kickoffClass = 'kickoff live'; tag = 'live'; }
+
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = `
+        <div class="comp-label ${clubClass}">${item.competition}</div>
+        <div class="match">
+          <div class="team home">${crest(m.team1)}<span>${m.team1.teamName}</span></div>
+          <div class="${kickoffClass}">${main}<span class="tag">${tag}</span></div>
+          <div class="team away"><span>${m.team2.teamName}</span>${crest(m.team2)}</div>
+        </div>
+      `;
+      dgroup.appendChild(wrapper);
+    });
+
+    content.appendChild(dgroup);
+  });
+
+  document.getElementById('updated-at').textContent = 'Zuletzt aktualisiert: ' + timeLabel(new Date()) + ' Uhr';
+}
+
+function refreshView(){
+  if (weekend === 'cup') loadCupAndRender();
+  else loadAndRender();
+}
+
+function setActiveTab(id){
+  ['btn-current', 'btn-next', 'btn-cup'].forEach(btnId =>
+    document.getElementById(btnId).classList.toggle('active', btnId === id)
+  );
+  document.querySelector('.league-switch').style.display = (id === 'btn-cup') ? 'none' : 'grid';
+}
+
 function wireControls(){
   document.getElementById('btn-bl1').addEventListener('click', () => {
     league = 'bl1';
@@ -573,28 +737,31 @@ function wireControls(){
   });
   document.getElementById('btn-current').addEventListener('click', () => {
     weekend = 'current';
-    document.getElementById('btn-current').classList.add('active');
-    document.getElementById('btn-next').classList.remove('active');
+    setActiveTab('btn-current');
     loadAndRender();
   });
   document.getElementById('btn-next').addEventListener('click', () => {
     weekend = 'next';
-    document.getElementById('btn-next').classList.add('active');
-    document.getElementById('btn-current').classList.remove('active');
+    setActiveTab('btn-next');
     loadAndRender();
+  });
+  document.getElementById('btn-cup').addEventListener('click', () => {
+    weekend = 'cup';
+    setActiveTab('btn-cup');
+    loadCupAndRender();
   });
   document.getElementById('refresh-btn').addEventListener('click', () => {
     cache = { bl1: null, bl2: null };
-    loadAndRender();
+    refreshView();
   });
 }
 
 wireControls();
-loadAndRender();
+refreshView();
 
 setInterval(() => {
   cache = { bl1: null, bl2: null };
-  loadAndRender();
+  refreshView();
 }, 3 * 60 * 1000);
 </script>
 </body>
