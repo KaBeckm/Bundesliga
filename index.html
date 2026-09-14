@@ -611,8 +611,8 @@ async function loadCupAndRender(){
   const season = currentSeason();
   const MIN_MATCHES_PER_CLUB = 2;
   const needles = [
-    { needle: 'Bayern München', club: 'bayern' },
-    { needle: 'Darmstadt 98', club: 'darmstadt' }
+    { needle: 'Bayern', club: 'bayern' },
+    { needle: 'Darmstadt', club: 'darmstadt' }
   ];
 
   let collected = [];
@@ -640,11 +640,18 @@ async function loadCupAndRender(){
   if (!(await pull('dfb', 'DFB-Pokal'))) anySourceFailed = true;
 
   // Der Champions-League-Shortcut bei OpenLigaDB ist saisonabhängig und nicht einheitlich benannt -
-  // beide gängigen Schreibweisen werden versucht, stillschweigend übersprungen, falls keine passt.
-  const clCandidates = [`ucl${season}`, `ucl${String(season).slice(-2)}`];
+  // mehrere gängige Schreibweisen werden versucht, stillschweigend übersprungen, falls keine passt.
+  const clCandidates = [
+    `ucl${season}`, `ucl${String(season).slice(-2)}`,
+    `cl${season}`, `championsleague${season}`
+  ];
   let clOk = false;
   for (const shortcut of clCandidates) {
-    if (await pull(shortcut, 'UEFA Champions League')) { clOk = true; break; }
+    const before = collected.length;
+    const ok = await pull(shortcut, 'UEFA Champions League');
+    // Nur als "gefunden" werten, wenn dabei tatsächlich ein Treffer für Bayern/Darmstadt kam -
+    // sonst würde die Schleife schon bei einer leeren, aber technisch erfolgreichen Antwort stoppen.
+    if (ok && collected.length > before) { clOk = true; break; }
   }
 
   // Statt eines starren Zeitfensters: je Verein die nächsten anstehenden Spiele nehmen,
