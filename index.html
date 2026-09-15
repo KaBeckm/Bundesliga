@@ -639,20 +639,25 @@ async function loadCupAndRender(){
 
   if (!(await pull('dfb', 'DFB-Pokal'))) anySourceFailed = true;
 
-  // Der Champions-League-Shortcut bei OpenLigaDB ist saisonabhängig und nicht einheitlich benannt -
-  // mehrere gängige Schreibweisen werden versucht, stillschweigend übersprungen, falls keine passt.
-  const clCandidates = [
-    `ucl${season}`, `ucl${String(season).slice(-2)}`,
-    `cl${season}`, `championsleague${season}`
-  ];
+  // Champions League liegt bei OpenLigaDB je nach Saison unter verschiedenen Kürzeln vor
+  // (teils mehrere parallele Einträge). Deshalb werden alle Kandidaten abgefragt und
+  // anschließend über die matchID dedupliziert, statt beim ersten Treffer abzubrechen.
+  const clCandidates = ['ucl', `ucl${season}`, `ucl${String(season).slice(-2)}`, `cl${season}`];
   let clOk = false;
   for (const shortcut of clCandidates) {
     const before = collected.length;
-    const ok = await pull(shortcut, 'UEFA Champions League');
-    // Nur als "gefunden" werten, wenn dabei tatsächlich ein Treffer für Bayern/Darmstadt kam -
-    // sonst würde die Schleife schon bei einer leeren, aber technisch erfolgreichen Antwort stoppen.
-    if (ok && collected.length > before) { clOk = true; break; }
+    await pull(shortcut, 'UEFA Champions League');
+    if (collected.length > before) clOk = true;
   }
+
+  // Duplikate entfernen (dasselbe Spiel kann über mehrere Liga-Kürzel geliefert werden)
+  const seen = new Set();
+  collected = collected.filter(item => {
+    const id = item.match.matchID ?? `${item.match.matchDateTime}-${item.match.team1?.teamName}-${item.match.team2?.teamName}`;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
 
   // Statt eines starren Zeitfensters: je Verein die nächsten anstehenden Spiele nehmen,
   // damit auch bei größeren Pausen zwischen den Runden mindestens zwei Termine sichtbar bleiben.
