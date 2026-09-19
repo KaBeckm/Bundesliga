@@ -609,7 +609,7 @@ async function loadCupAndRender(){
   const now = new Date();
   const startOfToday = new Date(now); startOfToday.setHours(0,0,0,0);
   const season = currentSeason();
-  const MIN_MATCHES_PER_CLUB = 2;
+  const MIN_MATCHES_PER_CLUB = 3;
   const needles = [
     { needle: 'Bayern', club: 'bayern' },
     { needle: 'Darmstadt', club: 'darmstadt' }
@@ -680,7 +680,7 @@ async function loadCupAndRender(){
   const intro = document.createElement('div');
   intro.className = 'note';
   intro.style.marginBottom = '18px';
-  intro.textContent = 'Nächste Pokal- & Europapokalspiele je Verein';
+  intro.textContent = 'Nächste Pokal- & Europapokalspiele je Verein (bis zu 3)';
   content.appendChild(intro);
 
   const days = [];
