@@ -327,6 +327,66 @@
     line-height: 1.6;
   }
   .status.error{ color: #e2836a; }
+
+  .table-head, .table-row{
+    display:grid;
+    grid-template-columns: 22px 20px 1fr 30px 32px 36px;
+    align-items:center;
+    gap: 6px;
+    padding: 7px 10px;
+    margin: 0 -10px;
+  }
+  .table-head{
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 6px;
+  }
+  .table-row{
+    border-bottom: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .table-row:last-child{ border-bottom: none; }
+  .table-row .rank{
+    font-family:'Oswald', sans-serif;
+    font-weight: 500;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    text-align: center;
+  }
+  .table-row img{ width:18px; height:18px; object-fit:contain; }
+  .table-row .name{
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    min-width:0;
+  }
+  .table-head .num, .table-row .num{
+    text-align:center;
+    font-variant-numeric: tabular-nums;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+  .table-row .pts{
+    text-align:center;
+    font-family:'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .table-row.featured{
+    background: var(--accent-soft);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .table-row.featured .name{ color: var(--accent); font-weight: 700; }
+  .table-row.featured .pts{ color: var(--accent); }
   .spinner{
     display:inline-block;
     width:14px; height:14px;
@@ -360,6 +420,8 @@
     .match{ grid-template-columns: 1fr 54px 1fr; padding: 6px 8px; gap:6px; }
     .kickoff{ font-size:12.5px; padding: 3px 3px; }
     .kickoff.final{ font-size:13px; }
+    .table-head, .table-row{ grid-template-columns: 18px 16px 1fr 24px 28px 30px; padding: 6px 8px; gap:4px; }
+    .table-row .name{ font-size: 12.5px; }
   }
 </style>
 </head>
@@ -386,6 +448,7 @@
   <div class="weekend-switch">
     <button id="btn-current" class="active">Aktueller Spieltag</button>
     <button id="btn-next">Nächster Spieltag</button>
+    <button id="btn-table">Tabelle</button>
     <button id="btn-cup">Pokalspiele</button>
   </div>
 
@@ -473,21 +536,28 @@ async function ensureGroupMatches(lg, orderId){
   return state.groups[orderId];
 }
 
+async function ensureTableRows(lg){
+  const state = cache[lg];
+  if (state.tableRows) return state.tableRows;
+  try {
+    state.tableRows = await fetchJSON(`${API}/getbltable/${lg}/${state.season}`);
+  } catch (e) {
+    state.tableRows = [];
+  }
+  return state.tableRows;
+}
+
 async function ensureTable(lg){
   const state = cache[lg];
   if (state.table) return state.table;
-  try {
-    const rows = await fetchJSON(`${API}/getbltable/${lg}/${state.season}`);
-    const table = {};
-    rows.forEach((row, idx) => {
-      const id = row.teamInfoId ?? row.teamId;
-      if (id != null) table[id] = idx + 1;
-    });
-    state.table = table;
-  } catch (e) {
-    state.table = {}; // Tabellenplatz ist ein Zusatz - wenn das scheitert, zeigen wir die Spiele trotzdem
-  }
-  return state.table;
+  const rows = await ensureTableRows(lg);
+  const table = {};
+  rows.forEach((row, idx) => {
+    const id = row.teamInfoId ?? row.teamId;
+    if (id != null) table[id] = idx + 1;
+  });
+  state.table = table;
+  return table;
 }
 
 function rankBadge(table, team){
@@ -591,6 +661,75 @@ async function loadAndRender(){
       `Die Daten von OpenLigaDB (api.openligadb.de) konnten gerade nicht geladen werden. ` +
       `Das kann an einer Netzwerksperre oder einer kurzzeitigen Störung der Quelle liegen.` +
       `<br><button class="retry" onclick="loadAndRender()">Erneut versuchen</button>`,
+      true
+    );
+    document.getElementById('updated-at').textContent = 'Aktualisierung fehlgeschlagen';
+  }
+}
+
+async function loadTableAndRender(){
+  applyTheme();
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="status"><span class="spinner"></span>Lade Tabelle …</div>`;
+
+  try {
+    await ensureLeagueData(league);
+    const rows = await ensureTableRows(league);
+
+    if (!rows.length) {
+      setStatus(
+        `Die Tabelle der ${LEAGUE_NAMES[league]} konnte gerade nicht geladen werden.` +
+        `<br><button class="retry" onclick="loadTableAndRender()">Erneut versuchen</button>`,
+        true
+      );
+      return;
+    }
+
+    const clubRow = rows.find(r => r.teamName && r.teamName.includes(THEME_MATCH[league]));
+    const logo = document.getElementById('club-logo');
+    if (clubRow && clubRow.teamIconUrl) { logo.src = clubRow.teamIconUrl; logo.style.display = 'block'; }
+    else { logo.style.display = 'none'; }
+
+    content.innerHTML = '';
+
+    const intro = document.createElement('div');
+    intro.className = 'note';
+    intro.style.marginBottom = '10px';
+    intro.textContent = `Tabelle · ${LEAGUE_NAMES[league]}`;
+    content.appendChild(intro);
+
+    const head = document.createElement('div');
+    head.className = 'table-head';
+    head.innerHTML = `<span></span><span></span><span>Verein</span><span class="num">Sp</span><span class="num">TD</span><span class="num">Pkt</span>`;
+    content.appendChild(head);
+
+    rows.forEach((row, idx) => {
+      const name = row.teamName || '';
+      const isFeatured = name.includes(THEME_MATCH[league]);
+      const el = document.createElement('div');
+      el.className = 'table-row' + (isFeatured ? ' featured' : '');
+      const icon = row.teamIconUrl ? `<img src="${row.teamIconUrl}" alt="" onerror="this.style.display='none'">` : '<span></span>';
+      const diffNum = row.goalDiff ?? (row.goals - row.opponentGoals);
+      const diff = (diffNum > 0 ? '+' : '') + diffNum;
+      el.innerHTML = `
+        <span class="rank">${idx + 1}</span>
+        ${icon}
+        <span class="name">${name}</span>
+        <span class="num">${row.matches}</span>
+        <span class="num">${diff}</span>
+        <span class="pts">${row.points}</span>
+      `;
+      content.appendChild(el);
+    });
+
+    document.getElementById('updated-at').textContent =
+      'Zuletzt aktualisiert: ' + timeLabel(new Date()) + ' Uhr';
+
+  } catch (err) {
+    console.error(err);
+    setStatus(
+      `Die Daten von OpenLigaDB (api.openligadb.de) konnten gerade nicht geladen werden.` +
+      `<br><button class="retry" onclick="loadTableAndRender()">Erneut versuchen</button>`,
       true
     );
     document.getElementById('updated-at').textContent = 'Aktualisierung fehlgeschlagen';
@@ -732,11 +871,12 @@ async function loadCupAndRender(){
 
 function refreshView(){
   if (weekend === 'cup') loadCupAndRender();
+  else if (weekend === 'table') loadTableAndRender();
   else loadAndRender();
 }
 
 function setActiveTab(id){
-  ['btn-current', 'btn-next', 'btn-cup'].forEach(btnId =>
+  ['btn-current', 'btn-next', 'btn-table', 'btn-cup'].forEach(btnId =>
     document.getElementById(btnId).classList.toggle('active', btnId === id)
   );
   document.querySelector('.league-switch').style.display = (id === 'btn-cup') ? 'none' : 'grid';
@@ -747,13 +887,13 @@ function wireControls(){
     league = 'bl1';
     document.getElementById('btn-bl1').classList.add('active');
     document.getElementById('btn-bl2').classList.remove('active');
-    loadAndRender();
+    refreshView();
   });
   document.getElementById('btn-bl2').addEventListener('click', () => {
     league = 'bl2';
     document.getElementById('btn-bl2').classList.add('active');
     document.getElementById('btn-bl1').classList.remove('active');
-    loadAndRender();
+    refreshView();
   });
   document.getElementById('btn-current').addEventListener('click', () => {
     weekend = 'current';
@@ -764,6 +904,11 @@ function wireControls(){
     weekend = 'next';
     setActiveTab('btn-next');
     loadAndRender();
+  });
+  document.getElementById('btn-table').addEventListener('click', () => {
+    weekend = 'table';
+    setActiveTab('btn-table');
+    loadTableAndRender();
   });
   document.getElementById('btn-cup').addEventListener('click', () => {
     weekend = 'cup';
