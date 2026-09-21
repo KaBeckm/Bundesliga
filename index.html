@@ -173,26 +173,35 @@
   .league-switch button:not(.active):hover{ color: var(--text); }
 
   .weekend-switch{
-    display:flex;
-    gap: 18px;
-    margin-bottom: 14px;
-    flex-wrap: wrap;
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    background: var(--line);
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 16px;
   }
   .weekend-switch button{
-    background:none;
+    background: transparent;
     border:none;
-    font-family:'Inter',sans-serif;
-    font-size: 13px;
+    font-family:'Oswald', sans-serif;
+    font-size: 12px;
     font-weight: 500;
+    letter-spacing: 0.1px;
     color: var(--text-dim);
-    padding: 4px 0;
+    padding: 8px 2px;
+    border-radius: 8px;
     cursor: pointer;
-    border-bottom: 2px solid transparent;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .weekend-switch button.active{
-    color: var(--text);
-    border-bottom-color: var(--accent);
+    background: var(--bg-raise);
+    color: var(--accent);
   }
+  .weekend-switch button:not(.active):hover{ color: var(--text); }
 
   .day-group{ margin-bottom: 16px; }
   .day-heading{
@@ -417,6 +426,7 @@
     .team img{ width:14px; height:14px; }
     header.top h1{ font-size: 18px; }
     header.top .heading img{ width:32px; height:32px; }
+    .weekend-switch button{ font-size: 10.5px; padding: 7px 1px; }
     .match{ grid-template-columns: 1fr 54px 1fr; padding: 6px 8px; gap:6px; }
     .kickoff{ font-size:12.5px; padding: 3px 3px; }
     .kickoff.final{ font-size:13px; }
@@ -446,10 +456,10 @@
   </div>
 
   <div class="weekend-switch">
-    <button id="btn-current" class="active">Aktueller Spieltag</button>
-    <button id="btn-next">Nächster Spieltag</button>
+    <button id="btn-current" class="active">Aktuell</button>
+    <button id="btn-next">Nächste</button>
     <button id="btn-table">Tabelle</button>
-    <button id="btn-cup">Pokalspiele</button>
+    <button id="btn-cup">Pokal</button>
   </div>
 
   <div id="content"></div>
