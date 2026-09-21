@@ -203,6 +203,15 @@
   }
   .weekend-switch button:not(.active):hover{ color: var(--text); }
 
+  .swipe-hint{
+    font-size: 10px;
+    color: var(--text-dim);
+    text-align: center;
+    margin: -10px 0 16px 0;
+    letter-spacing: 0.2px;
+    opacity: 0.75;
+  }
+
   .day-group{ margin-bottom: 16px; }
   .day-heading{
     display:flex;
@@ -461,6 +470,7 @@
     <button id="btn-table">Tabelle</button>
     <button id="btn-cup">Pokal</button>
   </div>
+  <div class="swipe-hint">← nach links/rechts wischen, um Ansicht zu wechseln →</div>
 
   <div id="content"></div>
 
@@ -938,6 +948,36 @@ setInterval(() => {
   cache = { bl1: null, bl2: null };
   refreshView();
 }, 3 * 60 * 1000);
+
+// Wischgesten: links/rechts wischen wechselt zwischen den vier Reitern
+const TAB_ORDER = ['btn-current', 'btn-next', 'btn-table', 'btn-cup'];
+function currentTabIndex(){
+  const map = { current: 0, next: 1, table: 2, cup: 3 };
+  return map[weekend] ?? 0;
+}
+
+let touchStartX = 0, touchStartY = 0;
+document.addEventListener('touchstart', e => {
+  if (e.touches.length !== 1) return;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  if (!e.changedTouches || e.changedTouches.length !== 1) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  const THRESHOLD = 55;
+  // Nur reagieren, wenn die Bewegung deutlich horizontal ist - sonst mit normalem Scrollen kollidieren
+  if (Math.abs(dx) < THRESHOLD || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+
+  const idx = currentTabIndex();
+  if (dx < 0 && idx < TAB_ORDER.length - 1) {
+    document.getElementById(TAB_ORDER[idx + 1]).click(); // nach links wischen -> nächster Reiter
+  } else if (dx > 0 && idx > 0) {
+    document.getElementById(TAB_ORDER[idx - 1]).click(); // nach rechts wischen -> vorheriger Reiter
+  }
+}, { passive: true });
 </script>
 </body>
 </html>
