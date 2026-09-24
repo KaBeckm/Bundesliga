@@ -807,14 +807,13 @@ async function loadNationalTeamAndRender(){
     } catch (e) { /* Kandidat existiert nicht oder ist gerade nicht erreichbar - einfach überspringen */ }
   }
 
-  // Der Shortcut für Länderspiele ist bei OpenLigaDB nicht dokumentiert und variiert je Wettbewerb -
-  // mehrere gängige Kandidaten für die laufende Nations-League-Saison werden durchprobiert.
+  // Direkt aus dem OpenLigaDB-Liga-Katalog für die Saison 2026 entnommen:
+  // "DFB Nationalspiele" (Shortcut DFBN) ist der aktuell gepflegte, hochwertige Eintrag,
+  // ergänzt um die Nations-League-A-Gruppe und Freundschaftsspiele.
   const candidates = [
-    { shortcut: 'nl2026', label: 'UEFA Nations League' },
-    { shortcut: 'uefanationsleague2026', label: 'UEFA Nations League' },
-    { shortcut: 'nationsleague2026', label: 'UEFA Nations League' },
-    { shortcut: 'nl', label: 'UEFA Nations League' },
-    { shortcut: 'wm2026', label: 'FIFA Weltmeisterschaft' }
+    { shortcut: 'DFBN', label: 'DFB-Länderspiel' },
+    { shortcut: 'nla', label: 'UEFA Nations League' },
+    { shortcut: 'FTS', label: 'Freundschaftsspiel' }
   ];
   for (const c of candidates) await pull(c.shortcut, c.label);
 
