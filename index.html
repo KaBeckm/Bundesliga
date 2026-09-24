@@ -52,6 +52,21 @@
     --text-dim: #9a9382;
     --live: #ff8a3d;
   }
+  body.theme-nt{
+    /* Deutschland-Design für die Nationalmannschaft: Schwarz-Rot-Gold */
+    --accent: #ffcc02;
+    --accent-dim: #7a6a1a;
+    --accent-soft: rgba(255,204,2,0.10);
+    --trim: #dd0000;
+    --bg-a: #1a1005;
+    --bg-b: #120b03;
+    --bg: #0a0603;
+    --bg-raise: #1c1408;
+    --line: #332a12;
+    --text: #f5f1e6;
+    --text-dim: #a79b7a;
+    --live: #ff8a3d;
+  }
 
   *{ box-sizing: border-box; }
   html,body{ margin:0; padding:0; }
@@ -79,6 +94,9 @@
   }
   body.theme-cup .kit-stripe{
     background: linear-gradient(90deg, #dc052d 50%, #0057a8 50%);
+  }
+  body.theme-nt .kit-stripe{
+    background: linear-gradient(90deg, #000000 0%, #000000 33.33%, #dd0000 33.33%, #dd0000 66.66%, #ffcc02 66.66%, #ffcc02 100%);
   }
 
   .wrap{
@@ -174,7 +192,7 @@
 
   .weekend-switch{
     display:grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 2px;
     background: var(--line);
     border-radius: 10px;
@@ -185,11 +203,11 @@
     background: transparent;
     border:none;
     font-family:'Oswald', sans-serif;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.1px;
     color: var(--text-dim);
-    padding: 8px 2px;
+    padding: 8px 1px;
     border-radius: 8px;
     cursor: pointer;
     text-align: center;
@@ -325,6 +343,7 @@
     font-weight: 600;
     letter-spacing: 0.2px;
     margin: 4px 0 2px 2px;
+    color: var(--accent);
   }
   .comp-label.club-bayern{ color: #ff7a7a; }
   .comp-label.club-darmstadt{ color: #6badf2; }
@@ -435,7 +454,7 @@
     .team img{ width:14px; height:14px; }
     header.top h1{ font-size: 18px; }
     header.top .heading img{ width:32px; height:32px; }
-    .weekend-switch button{ font-size: 10.5px; padding: 7px 1px; }
+    .weekend-switch button{ font-size: 9.5px; padding: 7px 1px; }
     .match{ grid-template-columns: 1fr 54px 1fr; padding: 6px 8px; gap:6px; }
     .kickoff{ font-size:12.5px; padding: 3px 3px; }
     .kickoff.final{ font-size:13px; }
@@ -469,6 +488,7 @@
     <button id="btn-next">Nächste</button>
     <button id="btn-table">Tabelle</button>
     <button id="btn-cup">Pokal</button>
+    <button id="btn-nt">DFB</button>
   </div>
   <div class="swipe-hint">← nach links/rechts wischen, um Ansicht zu wechseln →</div>
 
@@ -590,7 +610,7 @@ function setStatus(html, isError){
 }
 
 function applyTheme(){
-  document.body.classList.remove('theme-cup');
+  document.body.classList.remove('theme-cup', 'theme-nt');
   document.body.classList.toggle('theme-bl2', league === 'bl2');
   document.getElementById('page-sub').textContent = `${LEAGUE_NAMES[league]} · im Design ${league === 'bl1' ? 'des' : 'von'} ${THEME_CLUB[league]}`;
 }
@@ -756,6 +776,120 @@ async function loadTableAndRender(){
   }
 }
 
+async function loadNationalTeamAndRender(){
+  document.body.classList.remove('theme-bl2');
+  document.body.classList.add('theme-nt');
+  document.getElementById('club-logo').style.display = 'none';
+  document.getElementById('page-sub').textContent = 'Herren-Nationalmannschaft · Schwarz-Rot-Gold';
+
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="status"><span class="spinner"></span>Suche Länderspiele …</div>`;
+
+  const now = new Date();
+  const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
+  const season = currentSeason();
+  const NEEDLE = 'Deutschland';
+  const MAX_MATCHES = 4;
+
+  let collected = [];
+
+  async function pull(shortcut, label){
+    try {
+      const matches = await fetchJSON(`${API}/getmatchdata/${shortcut}/${season}`);
+      matches.forEach(m => {
+        const dt = new Date(m.matchDateTime);
+        if (dt < startOfToday) return;
+        const hit = (m.team1.teamName && m.team1.teamName.includes(NEEDLE)) ||
+                    (m.team2.teamName && m.team2.teamName.includes(NEEDLE));
+        if (!hit) return;
+        collected.push({ match: m, competition: label });
+      });
+    } catch (e) { /* Kandidat existiert nicht oder ist gerade nicht erreichbar - einfach überspringen */ }
+  }
+
+  // Der Shortcut für Länderspiele ist bei OpenLigaDB nicht dokumentiert und variiert je Wettbewerb -
+  // mehrere gängige Kandidaten für die laufende Nations-League-Saison werden durchprobiert.
+  const candidates = [
+    { shortcut: 'nl2026', label: 'UEFA Nations League' },
+    { shortcut: 'uefanationsleague2026', label: 'UEFA Nations League' },
+    { shortcut: 'nationsleague2026', label: 'UEFA Nations League' },
+    { shortcut: 'nl', label: 'UEFA Nations League' },
+    { shortcut: 'wm2026', label: 'FIFA Weltmeisterschaft' }
+  ];
+  for (const c of candidates) await pull(c.shortcut, c.label);
+
+  const seen = new Set();
+  collected = collected
+    .filter(item => {
+      const id = item.match.matchID ?? `${item.match.matchDateTime}-${item.match.team1?.teamName}-${item.match.team2?.teamName}`;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    })
+    .sort((a, b) => new Date(a.match.matchDateTime) - new Date(b.match.matchDateTime))
+    .slice(0, MAX_MATCHES);
+
+  if (!collected.length) {
+    content.innerHTML = `<div class="status">Aktuell sind keine anstehenden Länderspiele der deutschen Nationalmannschaft bekannt ` +
+      `(die Datenabdeckung für Länderspiele bei OpenLigaDB ist eingeschränkt - falls das öfter vorkommt, sag Bescheid).` +
+      `<br><button class="retry" onclick="loadNationalTeamAndRender()">Erneut versuchen</button></div>`;
+    document.getElementById('updated-at').textContent = 'Zuletzt aktualisiert: ' + timeLabel(new Date()) + ' Uhr';
+    return;
+  }
+
+  content.innerHTML = '';
+  const intro = document.createElement('div');
+  intro.className = 'note';
+  intro.style.marginBottom = '18px';
+  intro.textContent = `Nächste ${collected.length} Länderspiele · Deutschland`;
+  content.appendChild(intro);
+
+  const days = [];
+  collected.forEach(item => {
+    const dt = new Date(item.match.matchDateTime);
+    let g = days.find(d => isSameBerlinDay(d.refDate, dt));
+    if (!g) { g = { refDate: dt, name: dayName(dt), date: dayDate(dt), items: [] }; days.push(g); }
+    g.items.push(item);
+  });
+
+  days.forEach(day => {
+    const dgroup = document.createElement('div');
+    dgroup.className = 'day-group';
+    const heading = document.createElement('div');
+    heading.className = 'day-heading';
+    heading.innerHTML = `<span class="name">${day.name}</span><span class="date">${day.date}</span><span class="rule"></span>`;
+    dgroup.appendChild(heading);
+
+    day.items.forEach(item => {
+      const m = item.match;
+      const dt = new Date(m.matchDateTime);
+      const final = finalResult(m);
+      const live = isLiveNow(m);
+
+      let kickoffClass = 'kickoff';
+      let main = timeLabel(dt);
+      let tag = 'Uhr';
+      if (final) { kickoffClass += ' final'; main = final; tag = 'Endstand'; }
+      else if (live) { kickoffClass += ' live'; tag = 'live'; }
+
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = `
+        <div class="comp-label">${item.competition}</div>
+        <div class="match">
+          <div class="team home">${crest(m.team1)}<span>${m.team1.teamName}</span></div>
+          <div class="${kickoffClass}">${main}<span class="tag">${tag}</span></div>
+          <div class="team away"><span>${m.team2.teamName}</span>${crest(m.team2)}</div>
+        </div>
+      `;
+      dgroup.appendChild(wrapper);
+    });
+
+    content.appendChild(dgroup);
+  });
+
+  document.getElementById('updated-at').textContent = 'Zuletzt aktualisiert: ' + timeLabel(new Date()) + ' Uhr';
+}
+
 async function loadCupAndRender(){
   document.body.classList.remove('theme-bl2');
   document.body.classList.add('theme-cup');
@@ -892,14 +1026,15 @@ async function loadCupAndRender(){
 function refreshView(){
   if (weekend === 'cup') loadCupAndRender();
   else if (weekend === 'table') loadTableAndRender();
+  else if (weekend === 'nt') loadNationalTeamAndRender();
   else loadAndRender();
 }
 
 function setActiveTab(id){
-  ['btn-current', 'btn-next', 'btn-table', 'btn-cup'].forEach(btnId =>
+  ['btn-current', 'btn-next', 'btn-table', 'btn-cup', 'btn-nt'].forEach(btnId =>
     document.getElementById(btnId).classList.toggle('active', btnId === id)
   );
-  document.querySelector('.league-switch').style.display = (id === 'btn-cup') ? 'none' : 'grid';
+  document.querySelector('.league-switch').style.display = (id === 'btn-cup' || id === 'btn-nt') ? 'none' : 'grid';
 }
 
 function wireControls(){
@@ -935,6 +1070,11 @@ function wireControls(){
     setActiveTab('btn-cup');
     loadCupAndRender();
   });
+  document.getElementById('btn-nt').addEventListener('click', () => {
+    weekend = 'nt';
+    setActiveTab('btn-nt');
+    loadNationalTeamAndRender();
+  });
   document.getElementById('refresh-btn').addEventListener('click', () => {
     cache = { bl1: null, bl2: null };
     refreshView();
@@ -950,9 +1090,9 @@ setInterval(() => {
 }, 3 * 60 * 1000);
 
 // Wischgesten: links/rechts wischen wechselt zwischen den vier Reitern
-const TAB_ORDER = ['btn-current', 'btn-next', 'btn-table', 'btn-cup'];
+const TAB_ORDER = ['btn-current', 'btn-next', 'btn-table', 'btn-cup', 'btn-nt'];
 function currentTabIndex(){
-  const map = { current: 0, next: 1, table: 2, cup: 3 };
+  const map = { current: 0, next: 1, table: 2, cup: 3, nt: 4 };
   return map[weekend] ?? 0;
 }
 
