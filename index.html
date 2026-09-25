@@ -117,12 +117,15 @@
     display:flex;
     align-items:center;
     gap: 12px;
+    min-width: 0;
+    flex: 1 1 auto;
   }
   header.top .heading img{
     width: 38px;
     height: 38px;
     object-fit: contain;
     filter: drop-shadow(0 1px 4px rgba(0,0,0,.5));
+    flex: none;
   }
   header.top h1{
     font-family: 'Oswald', sans-serif;
@@ -132,6 +135,7 @@
     margin: 0;
     color: var(--text);
     line-height: 1.15;
+    min-width: 0;
   }
   header.top h1 .sub{
     display:block;
@@ -141,6 +145,10 @@
     color: var(--accent);
     letter-spacing: 0.3px;
     margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
   header.top .meta{
     font-size: 11.5px;
@@ -172,23 +180,28 @@
     margin-bottom: 8px;
   }
   .league-switch button{
-    font-family:'Oswald', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 0.3px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     background: transparent;
     color: var(--text-dim);
     border: none;
     border-radius: 8px;
-    padding: 8px 6px;
+    padding: 9px 6px;
     cursor: pointer;
     transition: background .15s ease, color .15s ease;
   }
+  .league-switch button svg{ width:22px; height:22px; display:block; }
   .league-switch button.active{
     background: var(--bg-raise);
     color: var(--accent);
   }
   .league-switch button:not(.active):hover{ color: var(--text); }
+
+  .league-switch.disabled{
+    opacity: 0.35;
+    pointer-events: none;
+  }
 
   .weekend-switch{
     display:grid;
@@ -200,21 +213,17 @@
     margin-bottom: 16px;
   }
   .weekend-switch button{
+    display:flex;
+    align-items:center;
+    justify-content:center;
     background: transparent;
     border:none;
-    font-family:'Oswald', sans-serif;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.1px;
     color: var(--text-dim);
-    padding: 8px 1px;
+    padding: 9px 2px;
     border-radius: 8px;
     cursor: pointer;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
+  .weekend-switch button svg{ width:19px; height:19px; display:block; }
   .weekend-switch button.active{
     background: var(--bg-raise);
     color: var(--accent);
@@ -454,7 +463,8 @@
     .team img{ width:14px; height:14px; }
     header.top h1{ font-size: 18px; }
     header.top .heading img{ width:32px; height:32px; }
-    .weekend-switch button{ font-size: 9.5px; padding: 7px 1px; }
+    .weekend-switch button svg{ width:17px; height:17px; }
+    .league-switch button svg{ width:19px; height:19px; }
     .match{ grid-template-columns: 1fr 54px 1fr; padding: 6px 8px; gap:6px; }
     .kickoff{ font-size:12.5px; padding: 3px 3px; }
     .kickoff.final{ font-size:13px; }
@@ -479,16 +489,30 @@
   </header>
 
   <div class="league-switch">
-    <button id="btn-bl1" class="active">1. Bundesliga</button>
-    <button id="btn-bl2">2. Bundesliga</button>
+    <button id="btn-bl1" class="active" title="1. Bundesliga" aria-label="1. Bundesliga">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><text x="12" y="16.5" text-anchor="middle" font-family="Oswald, sans-serif" font-size="12" font-weight="600" fill="currentColor">1</text></svg>
+    </button>
+    <button id="btn-bl2" title="2. Bundesliga" aria-label="2. Bundesliga">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><text x="12" y="16.5" text-anchor="middle" font-family="Oswald, sans-serif" font-size="12" font-weight="600" fill="currentColor">2</text></svg>
+    </button>
   </div>
 
   <div class="weekend-switch">
-    <button id="btn-current" class="active">Aktuell</button>
-    <button id="btn-next">Nächste</button>
-    <button id="btn-table">Tabelle</button>
-    <button id="btn-cup">Pokal</button>
-    <button id="btn-nt">DFB</button>
+    <button id="btn-current" class="active" title="Aktueller Spieltag" aria-label="Aktueller Spieltag">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17"/><path d="M8 3v4M16 3v4"/><circle cx="12" cy="14.5" r="1.9" fill="currentColor" stroke="none"/></svg>
+    </button>
+    <button id="btn-next" title="Nächster Spieltag" aria-label="Nächster Spieltag">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6l6 6-6 6"/><path d="M13 6l6 6-6 6"/></svg>
+    </button>
+    <button id="btn-table" title="Tabelle" aria-label="Tabelle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16"/><path d="M4 12h12"/><path d="M4 18h7"/></svg>
+    </button>
+    <button id="btn-cup" title="Pokalspiele" aria-label="Pokalspiele">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M7 5H4v1a4 4 0 0 0 4 4"/><path d="M17 5h3v1a4 4 0 0 1-4 4"/><path d="M12 13v3"/><path d="M9 20h6"/><path d="M9.5 16.5h5l.5 3.5h-6z"/></svg>
+    </button>
+    <button id="btn-nt" title="Nationalmannschaft" aria-label="Nationalmannschaft">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="4.67" fill="#111111"/><rect x="3" y="9.67" width="18" height="4.66" fill="#dd0000"/><rect x="3" y="14.33" width="18" height="4.67" fill="#ffcc02"/></svg>
+    </button>
   </div>
   <div class="swipe-hint">← nach links/rechts wischen, um Ansicht zu wechseln →</div>
 
@@ -807,12 +831,11 @@ async function loadNationalTeamAndRender(){
     } catch (e) { /* Kandidat existiert nicht oder ist gerade nicht erreichbar - einfach überspringen */ }
   }
 
-  // Direkt aus dem OpenLigaDB-Liga-Katalog für die Saison 2026 entnommen:
-  // "DFB Nationalspiele" (Shortcut DFBN) ist der aktuell gepflegte, hochwertige Eintrag,
-  // ergänzt um die Nations-League-A-Gruppe und Freundschaftsspiele.
+  // "nla" (dedizierte Nations-League-Liga) zuerst geprüft, da "DFBN" für diese beiden
+  // Termine offenbar noch nicht bestätigte Anstoßzeiten enthält.
   const candidates = [
-    { shortcut: 'DFBN', label: 'DFB-Länderspiel' },
     { shortcut: 'nla', label: 'UEFA Nations League' },
+    { shortcut: 'DFBN', label: 'DFB-Länderspiel' },
     { shortcut: 'FTS', label: 'Freundschaftsspiel' }
   ];
   for (const c of candidates) await pull(c.shortcut, c.label);
@@ -1044,7 +1067,7 @@ function setActiveTab(id){
   ['btn-current', 'btn-next', 'btn-table', 'btn-cup', 'btn-nt'].forEach(btnId =>
     document.getElementById(btnId).classList.toggle('active', btnId === id)
   );
-  document.querySelector('.league-switch').style.display = (id === 'btn-cup' || id === 'btn-nt') ? 'none' : 'grid';
+  document.querySelector('.league-switch').classList.toggle('disabled', id === 'btn-cup' || id === 'btn-nt');
 }
 
 function wireControls(){
