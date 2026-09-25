@@ -820,9 +820,16 @@ async function loadNationalTeamAndRender(){
   const seen = new Set();
   collected = collected
     .filter(item => {
-      const id = item.match.matchID ?? `${item.match.matchDateTime}-${item.match.team1?.teamName}-${item.match.team2?.teamName}`;
-      if (seen.has(id)) return false;
-      seen.add(id);
+      // Nach Kalendertag + Team-Paarung entdoppeln (nicht nach exakter Uhrzeit) - so werden
+      // auch Fälle erkannt, in denen zwei OpenLigaDB-Ligen dasselbe Spiel mit leicht
+      // unterschiedlicher Anstoßzeit führen. Bei einem Treffer gewinnt der zuerst geprüfte,
+      // höher priorisierte Kandidat (DFBN vor nla vor FTS).
+      const dt = new Date(item.match.matchDateTime);
+      const dayKey = dt.toLocaleDateString('en-CA', { timeZone: 'Europe/Berlin' });
+      const teams = [item.match.team1?.teamName || '', item.match.team2?.teamName || ''].sort().join('|');
+      const key = `${dayKey}::${teams}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     })
     .sort((a, b) => new Date(a.match.matchDateTime) - new Date(b.match.matchDateTime))
@@ -942,12 +949,16 @@ async function loadCupAndRender(){
     if (collected.length > before) clOk = true;
   }
 
-  // Duplikate entfernen (dasselbe Spiel kann über mehrere Liga-Kürzel geliefert werden)
+  // Duplikate entfernen (dasselbe Spiel kann über mehrere Liga-Kürzel geliefert werden) -
+  // nach Kalendertag + Team-Paarung statt exakter Uhrzeit, da diese zwischen den Quellen abweichen kann.
   const seen = new Set();
   collected = collected.filter(item => {
-    const id = item.match.matchID ?? `${item.match.matchDateTime}-${item.match.team1?.teamName}-${item.match.team2?.teamName}`;
-    if (seen.has(id)) return false;
-    seen.add(id);
+    const dt = new Date(item.match.matchDateTime);
+    const dayKey = dt.toLocaleDateString('en-CA', { timeZone: 'Europe/Berlin' });
+    const teams = [item.match.team1?.teamName || '', item.match.team2?.teamName || ''].sort().join('|');
+    const key = `${dayKey}::${teams}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 
