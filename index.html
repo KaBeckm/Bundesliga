@@ -145,10 +145,9 @@
     color: var(--accent);
     letter-spacing: 0.3px;
     margin-top: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+    white-space: normal;
+    line-height: 1.35;
+    min-height: 2.7em;
   }
   header.top .meta{
     font-size: 11.5px;
@@ -170,14 +169,18 @@
   }
   header.top .meta button:hover{ color: var(--text); border-color: var(--accent-dim); }
 
+  .league-toggle-row{
+    display:flex;
+    justify-content:flex-end;
+    margin: -6px 0 14px 0;
+  }
   .league-switch{
-    display:grid;
+    display:inline-grid;
     grid-template-columns: 1fr 1fr;
     gap: 2px;
     background: var(--line);
-    border-radius: 10px;
-    padding: 3px;
-    margin-bottom: 8px;
+    border-radius: 8px;
+    padding: 2px;
   }
   .league-switch button{
     display:flex;
@@ -186,22 +189,19 @@
     background: transparent;
     color: var(--text-dim);
     border: none;
-    border-radius: 8px;
-    padding: 9px 6px;
+    border-radius: 6px;
+    padding: 5px 9px;
     cursor: pointer;
     transition: background .15s ease, color .15s ease;
   }
-  .league-switch button svg{ width:22px; height:22px; display:block; }
+  .league-switch button svg{ width:16px; height:16px; display:block; }
   .league-switch button.active{
     background: var(--bg-raise);
     color: var(--accent);
   }
   .league-switch button:not(.active):hover{ color: var(--text); }
 
-  .league-switch.disabled{
-    opacity: 0.35;
-    pointer-events: none;
-  }
+  .league-toggle-row.hidden{ display:none; }
 
   .weekend-switch{
     display:grid;
@@ -464,7 +464,7 @@
     header.top h1{ font-size: 18px; }
     header.top .heading img{ width:32px; height:32px; }
     .weekend-switch button svg{ width:17px; height:17px; }
-    .league-switch button svg{ width:19px; height:19px; }
+    .league-switch button svg{ width:14px; height:14px; }
     .match{ grid-template-columns: 1fr 54px 1fr; padding: 6px 8px; gap:6px; }
     .kickoff{ font-size:12.5px; padding: 3px 3px; }
     .kickoff.final{ font-size:13px; }
@@ -488,15 +488,6 @@
     </div>
   </header>
 
-  <div class="league-switch">
-    <button id="btn-bl1" class="active" title="1. Bundesliga" aria-label="1. Bundesliga">
-      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><text x="12" y="16.5" text-anchor="middle" font-family="Oswald, sans-serif" font-size="12" font-weight="600" fill="currentColor">1</text></svg>
-    </button>
-    <button id="btn-bl2" title="2. Bundesliga" aria-label="2. Bundesliga">
-      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><text x="12" y="16.5" text-anchor="middle" font-family="Oswald, sans-serif" font-size="12" font-weight="600" fill="currentColor">2</text></svg>
-    </button>
-  </div>
-
   <div class="weekend-switch">
     <button id="btn-current" class="active" title="Aktueller Spieltag" aria-label="Aktueller Spieltag">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17"/><path d="M8 3v4M16 3v4"/><circle cx="12" cy="14.5" r="1.9" fill="currentColor" stroke="none"/></svg>
@@ -513,6 +504,16 @@
     <button id="btn-nt" title="Nationalmannschaft" aria-label="Nationalmannschaft">
       <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="4.67" fill="#111111"/><rect x="3" y="9.67" width="18" height="4.66" fill="#dd0000"/><rect x="3" y="14.33" width="18" height="4.67" fill="#ffcc02"/></svg>
     </button>
+  </div>
+  <div class="league-toggle-row" id="league-toggle-row">
+    <div class="league-switch">
+      <button id="btn-bl1" class="active" title="1. Bundesliga" aria-label="1. Bundesliga">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><text x="12" y="16.5" text-anchor="middle" font-family="Oswald, sans-serif" font-size="12" font-weight="600" fill="currentColor">1</text></svg>
+      </button>
+      <button id="btn-bl2" title="2. Bundesliga" aria-label="2. Bundesliga">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><text x="12" y="16.5" text-anchor="middle" font-family="Oswald, sans-serif" font-size="12" font-weight="600" fill="currentColor">2</text></svg>
+      </button>
+    </div>
   </div>
   <div class="swipe-hint">← nach links/rechts wischen, um Ansicht zu wechseln →</div>
 
@@ -1067,7 +1068,7 @@ function setActiveTab(id){
   ['btn-current', 'btn-next', 'btn-table', 'btn-cup', 'btn-nt'].forEach(btnId =>
     document.getElementById(btnId).classList.toggle('active', btnId === id)
   );
-  document.querySelector('.league-switch').classList.toggle('disabled', id === 'btn-cup' || id === 'btn-nt');
+  document.getElementById('league-toggle-row').classList.toggle('hidden', id === 'btn-cup' || id === 'btn-nt');
 }
 
 function wireControls(){
