@@ -67,6 +67,21 @@
     --text-dim: #a79b7a;
     --live: #ff8a3d;
   }
+  body.theme-rlsw{
+    /* Regionalliga Südwest / Kickers Offenbach Theme: Rot-Weiß */
+    --accent: #e2001a;
+    --accent-dim: #7a1a1f;
+    --accent-soft: rgba(226,0,26,0.09);
+    --trim: #ffffff;
+    --bg-a: #241012;
+    --bg-b: #150b0c;
+    --bg: #0f0708;
+    --bg-raise: #1c1011;
+    --line: #3a1e20;
+    --text: #f5efe9;
+    --text-dim: #a1857f;
+    --live: #ff8a3d;
+  }
 
   *{ box-sizing: border-box; }
   html,body{ margin:0; padding:0; }
@@ -86,11 +101,14 @@
     height: 6px;
     width: 100%;
   }
-  body:not(.theme-bl2) .kit-stripe{
+  body:not(.theme-bl2):not(.theme-rlsw) .kit-stripe{
     background: linear-gradient(90deg, var(--accent) 0%, var(--accent) 82%, var(--trim) 82%, var(--trim) 100%);
   }
   body.theme-bl2 .kit-stripe{
     background: linear-gradient(90deg, var(--accent) 50%, var(--trim) 50%);
+  }
+  body.theme-rlsw .kit-stripe{
+    background: repeating-linear-gradient(90deg, #e2001a 0, #e2001a 12.5%, #ffffff 12.5%, #ffffff 25%);
   }
   body.theme-cup .kit-stripe{
     background: linear-gradient(90deg, #dc052d 50%, #0057a8 50%);
@@ -169,18 +187,31 @@
   }
   header.top .meta button:hover{ color: var(--text); border-color: var(--accent-dim); }
 
-  .league-toggle-row{
+  .view-intro-row{
     display:flex;
-    justify-content:flex-end;
-    margin: -6px 0 14px 0;
+    align-items:center;
+    justify-content:space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+    min-height: 26px;
+  }
+  .view-intro-label{
+    font-size: 12.5px;
+    color: var(--text-dim);
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .league-switch{
     display:inline-grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 2px;
     background: var(--line);
     border-radius: 8px;
     padding: 2px;
+    flex: none;
   }
   .league-switch button{
     display:flex;
@@ -190,7 +221,7 @@
     color: var(--text-dim);
     border: none;
     border-radius: 6px;
-    padding: 5px 9px;
+    padding: 5px 8px;
     cursor: pointer;
     transition: background .15s ease, color .15s ease;
   }
@@ -201,7 +232,7 @@
   }
   .league-switch button:not(.active):hover{ color: var(--text); }
 
-  .league-toggle-row.hidden{ display:none; }
+  .hidden{ display:none !important; }
 
   .weekend-switch{
     display:grid;
@@ -505,17 +536,21 @@
       <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="4.67" fill="#111111"/><rect x="3" y="9.67" width="18" height="4.66" fill="#dd0000"/><rect x="3" y="14.33" width="18" height="4.67" fill="#ffcc02"/></svg>
     </button>
   </div>
-  <div class="league-toggle-row" id="league-toggle-row">
-    <div class="league-switch">
+  <div class="swipe-hint">← nach links/rechts wischen, um Ansicht zu wechseln →</div>
+  <div class="view-intro-row">
+    <div class="view-intro-label" id="view-intro-label"></div>
+    <div class="league-switch" id="league-toggle-row">
       <button id="btn-bl1" class="active" title="1. Bundesliga" aria-label="1. Bundesliga">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><text x="12" y="16.5" text-anchor="middle" font-family="Oswald, sans-serif" font-size="12" font-weight="600" fill="currentColor">1</text></svg>
       </button>
       <button id="btn-bl2" title="2. Bundesliga" aria-label="2. Bundesliga">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><text x="12" y="16.5" text-anchor="middle" font-family="Oswald, sans-serif" font-size="12" font-weight="600" fill="currentColor">2</text></svg>
       </button>
+      <button id="btn-rlsw" title="Regionalliga Südwest (Kickers Offenbach)" aria-label="Regionalliga Südwest">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><text x="12" y="16.5" text-anchor="middle" font-family="Oswald, sans-serif" font-size="12" font-weight="600" fill="currentColor">4</text></svg>
+      </button>
     </div>
   </div>
-  <div class="swipe-hint">← nach links/rechts wischen, um Ansicht zu wechseln →</div>
 
   <div id="content"></div>
 
@@ -523,15 +558,23 @@
 
 <script>
 const API = 'https://api.openligadb.de';
-const LEAGUE_NAMES = { bl1: '1. Bundesliga', bl2: '2. Bundesliga' };
-const THEME_CLUB = { bl1: 'FC Bayern München', bl2: 'SV Darmstadt 98' };
-const THEME_MATCH = { bl1: 'Bayern München', bl2: 'Darmstadt 98' };
+const LEAGUE_NAMES = { bl1: '1. Bundesliga', bl2: '2. Bundesliga', rlsw: 'Regionalliga Südwest' };
+const THEME_CLUB = { bl1: 'FC Bayern München', bl2: 'SV Darmstadt 98', rlsw: 'Kickers Offenbach' };
+const THEME_MATCH = { bl1: 'Bayern München', bl2: 'Darmstadt 98', rlsw: 'Offenbach' };
+// Für bl1/bl2 ist das Kürzel dokumentiert und eindeutig. Für die Regionalliga Südwest gibt es
+// dagegen kein offizielles, dokumentiertes Kürzel bei OpenLigaDB - mehrere gängige Schreibweisen
+// werden beim ersten Zugriff durchprobiert (siehe resolveLeague).
+const LEAGUE_SHORTCUT_CANDIDATES = {
+  bl1: ['bl1'],
+  bl2: ['bl2'],
+  rlsw: ['rlsw', 'rlsw2026', 'regionalligasuedwest', 'rlsuedwest', 'rl-suedwest', 'suedwest']
+};
 
 let league = 'bl1';
 let weekend = 'current';
 
 // cache[league] = { season, currentOrderId, groups: { [orderId]: {label, matches} }, table: { [teamId]: rank } }
-let cache = { bl1: null, bl2: null };
+let cache = { bl1: null, bl2: null, rlsw: null };
 
 function currentSeason(){
   const now = new Date();
@@ -584,18 +627,30 @@ function crest(team){
   return team.teamIconUrl ? `<img src="${team.teamIconUrl}" alt="" onerror="this.style.display='none'">` : '';
 }
 
+async function resolveLeague(lg){
+  const candidates = LEAGUE_SHORTCUT_CANDIDATES[lg] || [lg];
+  for (const shortcut of candidates) {
+    try {
+      const group = await fetchJSON(`${API}/getcurrentgroup/${shortcut}`);
+      if (group && group.groupOrderID != null) return { shortcut, group };
+    } catch (e) { /* nächsten Kandidaten probieren */ }
+  }
+  return null;
+}
+
 async function ensureLeagueData(lg){
   if (cache[lg]) return cache[lg];
   const season = currentSeason();
-  const currentGroup = await fetchJSON(`${API}/getcurrentgroup/${lg}`);
-  cache[lg] = { season, currentOrderId: currentGroup.groupOrderID, groups: {}, table: null };
+  const resolved = await resolveLeague(lg);
+  if (!resolved) throw new Error(`Kein gültiges OpenLigaDB-Kürzel für "${lg}" gefunden`);
+  cache[lg] = { season, currentOrderId: resolved.group.groupOrderID, groups: {}, table: null, shortcut: resolved.shortcut };
   return cache[lg];
 }
 
 async function ensureGroupMatches(lg, orderId){
   const state = cache[lg];
   if (state.groups[orderId]) return state.groups[orderId];
-  const matches = await fetchJSON(`${API}/getmatchdata/${lg}/${state.season}/${orderId}`);
+  const matches = await fetchJSON(`${API}/getmatchdata/${state.shortcut}/${state.season}/${orderId}`);
   const label = matches.length ? matches[0].group.groupName : ('Spieltag ' + orderId);
   state.groups[orderId] = { label, matches };
   return state.groups[orderId];
@@ -605,7 +660,7 @@ async function ensureTableRows(lg){
   const state = cache[lg];
   if (state.tableRows) return state.tableRows;
   try {
-    state.tableRows = await fetchJSON(`${API}/getbltable/${lg}/${state.season}`);
+    state.tableRows = await fetchJSON(`${API}/getbltable/${state.shortcut}/${state.season}`);
   } catch (e) {
     state.tableRows = [];
   }
@@ -635,9 +690,15 @@ function setStatus(html, isError){
 }
 
 function applyTheme(){
-  document.body.classList.remove('theme-cup', 'theme-nt');
-  document.body.classList.toggle('theme-bl2', league === 'bl2');
-  document.getElementById('page-sub').textContent = `${LEAGUE_NAMES[league]} · im Design ${league === 'bl1' ? 'des' : 'von'} ${THEME_CLUB[league]}`;
+  document.body.classList.remove('theme-cup', 'theme-nt', 'theme-bl2', 'theme-rlsw');
+  if (league === 'bl2') document.body.classList.add('theme-bl2');
+  else if (league === 'rlsw') document.body.classList.add('theme-rlsw');
+  const article = (league === 'bl1') ? 'des' : 'von';
+  document.getElementById('page-sub').textContent = `${LEAGUE_NAMES[league]} · im Design ${article} ${THEME_CLUB[league]}`;
+}
+
+function setIntroLabel(text){
+  document.getElementById('view-intro-label').textContent = text;
 }
 
 function updateClubLogo(matches){
@@ -668,6 +729,7 @@ async function loadAndRender(){
     ]);
 
     if (!group.matches.length) {
+      setIntroLabel(`${LEAGUE_NAMES[league]}`);
       setStatus(`Für ${weekend === 'current' ? 'den aktuellen' : 'den nächsten'} Spieltag liegen für die ${LEAGUE_NAMES[league]} noch keine Ansetzungen vor.`);
       return;
     }
@@ -677,11 +739,7 @@ async function loadAndRender(){
     const days = groupMatchesByDay(group.matches);
     content.innerHTML = '';
 
-    const intro = document.createElement('div');
-    intro.className = 'note';
-    intro.style.marginBottom = '18px';
-    intro.textContent = `${group.label} · ${LEAGUE_NAMES[league]}`;
-    content.appendChild(intro);
+    setIntroLabel(`${group.label} · ${LEAGUE_NAMES[league]}`);
 
     days.forEach(day => {
       const dgroup = document.createElement('div');
@@ -742,6 +800,7 @@ async function loadTableAndRender(){
     const rows = await ensureTableRows(league);
 
     if (!rows.length) {
+      setIntroLabel(`Tabelle · ${LEAGUE_NAMES[league]}`);
       setStatus(
         `Die Tabelle der ${LEAGUE_NAMES[league]} konnte gerade nicht geladen werden.` +
         `<br><button class="retry" onclick="loadTableAndRender()">Erneut versuchen</button>`,
@@ -757,11 +816,7 @@ async function loadTableAndRender(){
 
     content.innerHTML = '';
 
-    const intro = document.createElement('div');
-    intro.className = 'note';
-    intro.style.marginBottom = '10px';
-    intro.textContent = `Tabelle · ${LEAGUE_NAMES[league]}`;
-    content.appendChild(intro);
+    setIntroLabel(`Tabelle · ${LEAGUE_NAMES[league]}`);
 
     const head = document.createElement('div');
     head.className = 'table-head';
@@ -802,7 +857,7 @@ async function loadTableAndRender(){
 }
 
 async function loadNationalTeamAndRender(){
-  document.body.classList.remove('theme-bl2');
+  document.body.classList.remove('theme-bl2', 'theme-rlsw');
   document.body.classList.add('theme-nt');
   document.getElementById('club-logo').style.display = 'none';
   document.getElementById('page-sub').textContent = 'Herren-Nationalmannschaft · Schwarz-Rot-Gold';
@@ -860,6 +915,7 @@ async function loadNationalTeamAndRender(){
     .slice(0, MAX_MATCHES);
 
   if (!collected.length) {
+    setIntroLabel('Nationalmannschaft');
     content.innerHTML = `<div class="status">Aktuell sind keine anstehenden Länderspiele der deutschen Nationalmannschaft bekannt ` +
       `(die Datenabdeckung für Länderspiele bei OpenLigaDB ist eingeschränkt - falls das öfter vorkommt, sag Bescheid).` +
       `<br><button class="retry" onclick="loadNationalTeamAndRender()">Erneut versuchen</button></div>`;
@@ -868,11 +924,7 @@ async function loadNationalTeamAndRender(){
   }
 
   content.innerHTML = '';
-  const intro = document.createElement('div');
-  intro.className = 'note';
-  intro.style.marginBottom = '18px';
-  intro.textContent = `Nächste ${collected.length} Länderspiele · Deutschland`;
-  content.appendChild(intro);
+  setIntroLabel(`Nächste ${collected.length} Länderspiele · Deutschland`);
 
   const days = [];
   collected.forEach(item => {
@@ -921,7 +973,7 @@ async function loadNationalTeamAndRender(){
 }
 
 async function loadCupAndRender(){
-  document.body.classList.remove('theme-bl2');
+  document.body.classList.remove('theme-bl2', 'theme-rlsw');
   document.body.classList.add('theme-cup');
   document.getElementById('club-logo').style.display = 'none';
   document.getElementById('page-sub').textContent = 'DFB-Pokal & Champions League · FC Bayern München und SV Darmstadt 98';
@@ -997,6 +1049,7 @@ async function loadCupAndRender(){
     .sort((a, b) => new Date(a.match.matchDateTime) - new Date(b.match.matchDateTime));
 
   if (!collected.length) {
+    setIntroLabel('Pokalspiele');
     content.innerHTML = `<div class="status">Für FC Bayern München und SV Darmstadt 98 sind aktuell keine DFB-Pokal- oder Champions-League-Spiele bekannt` +
       `${anySourceFailed || !clOk ? ' (ein Teil der Quellen war gerade nicht abrufbar oder deckt die aktuelle Saison nicht ab)' : ''}.</div>`;
     document.getElementById('updated-at').textContent = 'Zuletzt aktualisiert: ' + timeLabel(new Date()) + ' Uhr';
@@ -1004,11 +1057,7 @@ async function loadCupAndRender(){
   }
 
   content.innerHTML = '';
-  const intro = document.createElement('div');
-  intro.className = 'note';
-  intro.style.marginBottom = '18px';
-  intro.textContent = 'Nächste Pokal- & Europapokalspiele je Verein (bis zu 3)';
-  content.appendChild(intro);
+  setIntroLabel('Nächste Pokal- & Europapokalspiele je Verein (bis zu 3)');
 
   const days = [];
   collected.forEach(item => {
@@ -1071,17 +1120,26 @@ function setActiveTab(id){
   document.getElementById('league-toggle-row').classList.toggle('hidden', id === 'btn-cup' || id === 'btn-nt');
 }
 
+function setLeagueButton(id){
+  ['btn-bl1', 'btn-bl2', 'btn-rlsw'].forEach(btnId =>
+    document.getElementById(btnId).classList.toggle('active', btnId === id)
+  );
+}
+
 function wireControls(){
   document.getElementById('btn-bl1').addEventListener('click', () => {
     league = 'bl1';
-    document.getElementById('btn-bl1').classList.add('active');
-    document.getElementById('btn-bl2').classList.remove('active');
+    setLeagueButton('btn-bl1');
     refreshView();
   });
   document.getElementById('btn-bl2').addEventListener('click', () => {
     league = 'bl2';
-    document.getElementById('btn-bl2').classList.add('active');
-    document.getElementById('btn-bl1').classList.remove('active');
+    setLeagueButton('btn-bl2');
+    refreshView();
+  });
+  document.getElementById('btn-rlsw').addEventListener('click', () => {
+    league = 'rlsw';
+    setLeagueButton('btn-rlsw');
     refreshView();
   });
   document.getElementById('btn-current').addEventListener('click', () => {
@@ -1110,7 +1168,7 @@ function wireControls(){
     loadNationalTeamAndRender();
   });
   document.getElementById('refresh-btn').addEventListener('click', () => {
-    cache = { bl1: null, bl2: null };
+    cache = { bl1: null, bl2: null, rlsw: null };
     refreshView();
   });
 }
@@ -1119,7 +1177,7 @@ wireControls();
 refreshView();
 
 setInterval(() => {
-  cache = { bl1: null, bl2: null };
+  cache = { bl1: null, bl2: null, rlsw: null };
   refreshView();
 }, 3 * 60 * 1000);
 
